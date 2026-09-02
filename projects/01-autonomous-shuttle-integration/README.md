@@ -1,141 +1,170 @@
-# Autonomous Shuttle System Integration — EasyMile EZ10 / ROS 2 / Autoware
+# Reverse-Engineered Hardware Interface — EasyMile Shuttle
 
 [← Back to portfolio](../../README.md)
 
 ## Overview
 
-This project involved progressively transforming a poorly documented autonomous shuttle into an open, maintainable research platform based on ROS 2 and Autoware.
+This project started with a poorly documented autonomous shuttle that could not be independently controlled or integrated at the level needed for an open research platform.
 
-My role centered on **system understanding, retrofit, HW/SW integration, vehicle communication, multi-sensor integration, deployment, troubleshooting and field validation**.
+My work combined **protocol understanding, CAN reverse engineering, driver/interface development, system integration, regression testing, multi-sensor deployment and physical validation**.
 
-The software implementation was one part of a larger engineering problem: making a real vehicle, sensors, computers, networks and an autonomous-driving stack operate together reliably.
+The important engineering pattern was:
+
+> understand an existing black-box interface → characterize current behavior → create a clean software boundary → protect behavior with tests → refactor safely → validate progressively on the real machine.
+
+The same platform was later integrated with ROS 2 / Autoware and validated in autonomous operation.
 
 ---
 
 ## Starting point
 
-The shuttle was acquired without the level of system documentation needed to independently operate and modify the platform.
+Key questions were initially unresolved:
 
-Key challenges included:
+- Which messages actually commanded the vehicle?
+- Which state/feedback messages were required?
+- How did heartbeat and arming/enabling behavior work?
+- What happened when commands were malformed, stale or inconsistent with vehicle state?
+- How could vehicle-specific CAN logic be separated from higher-level robotics software?
+- How could changes be tested without discovering regressions only during vehicle trials?
 
-- understanding the vehicle command and status interfaces
-- identifying critical CAN messages, heartbeat behavior and arming sequences
-- replacing parts of the original onboard computing architecture
-- integrating external sensors and an open autonomous-driving stack
-- operating a multi-computer ROS 2 system reliably in the field
-- keeping configurations reproducible across test campaigns
+An early practical result was replacing the original short-range remote-control concept with a longer-range solution validated during real manual driving. The same system understanding later enabled software-based control from ROS/Autoware.
+
+---
+
+## Interface architecture
+
+The historical implementation mixed several responsibilities inside ROS 2 node code:
+
+- ROS parameters, publishers, subscribers, services and timers
+- Autoware command handling
+- command limiting
+- byte-level CAN encoding and decoding
+- vehicle state storage
+- heartbeat behavior
+- gear/accessory handling
+
+That implementation worked, but made isolated testing and safe modification harder.
+
+The refactoring direction was to introduce explicit boundaries:
+
+```mermaid
+flowchart TD
+    AW[Autoware / ROS 2 interfaces] --> NODE[VehicleInterfaceNode]
+    NODE --> TYPE[Generic command & state types]
+    TYPE --> POL[Command safety / limiting policy]
+    TYPE --> ADP[Vehicle adapter]
+    ADP --> CAN[EasyMile CAN adapter / codec]
+    CAN --> BUS[CAN transport]
+    BUS --> VEH[Physical shuttle]
+```
+
+The goal was not architecture for its own sake. It was to make hardware-specific protocol behavior **understandable, reusable and testable independently from the robotics framework**.
 
 ---
 
 ## My contribution
 
-### Vehicle reverse engineering and control interface
+### Reverse engineering
 
-I investigated the vehicle CAN communication to identify the behavior needed for safe external control, including:
+I investigated vehicle CAN behavior and identified the system-level elements required for external control, including:
 
 - command messages
 - vehicle status feedback
-- heartbeat signals
+- heartbeat behavior
 - arming / enabling sequences
 - timeout behavior
 - practical command limits
+- relationships between requested and reported vehicle state
 
-An early result was the replacement of the original short-range remote-control solution with a longer-range radio-control concept validated during real manual driving.
+Proprietary IDs, byte mappings and safety-sensitive command details are intentionally excluded from this public portfolio.
 
-The same system understanding later supported the interface between Autoware and the vehicle.
+### Characterization before modification
 
-### Autonomous-driving integration
+Before changing deployed behavior, the existing implementation was progressively characterized with tests covering areas such as:
 
-I integrated an open ROS 2 / Autoware architecture with the shuttle and its surrounding hardware.
+- velocity and steering decoding
+- gear and signal state
+- driving-command payloads
+- door / heartbeat behavior
+- accessory frames
+- receive-frame handling
+- malformed/unsupported frame behavior
 
-Work included:
+This created a reference against which refactoring could be compared.
 
-- ROS 2 / Autoware integration
-- vehicle command/status interfacing through CAN
-- LiDAR, IMU, GNSS-RTK and camera integration
-- mapping and localization support
-- configuration and launch profiles
-- logging and diagnostic tooling
-- operator/HMI support
-- bench and field validation
+### Driver / codec extraction
 
-### Multi-PC deployment and configuration
+Hardware-specific byte-level CAN logic was then separated into smaller components so it could be exercised without a complete ROS 2 runtime.
 
-The platform evolved toward a declarative configuration model that separated:
+The extracted logic covers responsibilities such as:
 
-- **machine** configuration
-- **vehicle** configuration
-- **site/map** configuration
-- runtime **role/profile**
-- autonomous-driving **stack**
+- frame validation
+- command payload encoding
+- status decoding
+- heartbeat generation
+- vehicle-specific identifiers and DLC expectations
 
-This reduced scattered configuration and made field setups easier to reproduce.
+Generic command/state types and an adapter boundary were introduced progressively so higher-level logic would depend less directly on EasyMile-specific protocol details.
 
-```mermaid
-flowchart LR
-    M[Deployment manifest] --> CFG[Machine / vehicle / site configuration]
-    CFG --> NET[Linux networking + DDS]
-    CFG --> DEV[Stable sensor / CAN device setup]
-    CFG --> RUN[Runtime services]
-    RUN --> AW[ROS 2 / Autoware]
-    RUN --> DR[Sensor & vehicle interfaces]
-    AW --> VI[Vehicle interface]
-    VI --> CAN[Vehicle CAN]
-```
+### Receive-path hardening
 
-The real internal network addresses, device names and proprietary CAN details are intentionally omitted.
+The receive path was hardened so malformed or unrelated frames could not silently update vehicle state. Validation addressed concerns such as:
 
-### Field operations
+- unsupported identifiers
+- incorrect frame metadata
+- invalid DLC
+- fixed payload boundaries
+- preserving state when a frame is rejected
 
-I also worked on the operational side of the platform:
+### Regression and staged validation
 
-- repeatable startup profiles
-- recording/logging support
-- version tracking for test configurations
-- troubleshooting
-- field-test documentation
-- incident and test-run traceability
+The validation strategy deliberately separated software-only checks from physical testing:
+
+1. characterize existing behavior
+2. build and run focused tests
+3. preserve historical regression tests
+4. validate pure protocol/adapter components independently
+5. perform CAN bench comparison where appropriate
+6. validate stationary vehicle behavior
+7. proceed to controlled low-speed/dynamic tests only after earlier stages pass
+
+This staged approach reduces the cost and risk of finding a software regression for the first time on a moving vehicle.
 
 ---
 
-## Engineering challenges
+## Full-system integration
 
-### 1. Black-box vehicle behavior
+The driver/interface work was one part of a larger system-integration effort. I also integrated and commissioned:
 
-The vehicle could not simply be commanded by sending steering and speed values. Correct operation also depended on state, heartbeat and enable/arming behavior.
+- ROS 2 / Autoware Universe
+- LiDAR, IMU, GNSS-RTK and cameras
+- Linux embedded computers
+- Ethernet / DDS communication
+- mapping and localization
+- logging and diagnostics
+- operator/HMI tooling
+- repeatable startup and deployment configuration
 
-**Engineering lesson:** understand the complete command state machine before trying to automate control.
-
-### 2. Integration across domains
-
-A localization or control problem could originate from:
-
-- sensor data
-- transforms/calibration
-- network/DDS configuration
-- device naming
-- time synchronization
-- map/configuration mismatch
-- CAN interface state
-- autonomous-stack parameters
-
-Troubleshooting therefore required a system-level view rather than focusing on one software component.
-
-### 3. Reproducible field configuration
-
-Multi-PC robotic systems become difficult to maintain when network, device and launch configuration is scattered across machines.
-
-The platform was progressively reorganized toward explicit configuration and manifests so that a test setup could be reproduced from versioned artifacts.
+```mermaid
+flowchart LR
+    SENS[LiDAR / IMU / GNSS / cameras] --> ROS[ROS 2 / Autoware]
+    ROS --> VI[Vehicle interface]
+    VI --> ADP[Vehicle-specific adapter]
+    ADP --> CAN[CAN]
+    CAN --> VEH[Shuttle]
+    VEH --> FB[Vehicle feedback]
+    FB --> ADP
+```
 
 ---
 
 ## Results
 
-- autonomous driving validated on a private site
-- operation at speeds up to **30 km/h**
-- real multi-sensor ROS 2 / Autoware integration
-- repeatable test, logging and diagnostic workflows
-- technical documentation and knowledge transfer
+- poorly documented vehicle behavior made usable for software-based control
+- reverse-engineered CAN interface integrated into an open robotics architecture
+- autonomous operation validated on a private site at speeds up to **30 km/h**
+- progressively testable protocol/adapter boundaries introduced around historical code
+- repeatable logging, configuration and diagnostic workflows
 - one-month on-site knowledge transfer to an industrial partner in Germany
 - continued support for reuse of the concept on **more than ten similar vehicles**
 
@@ -143,21 +172,22 @@ The platform was progressively reorganized toward explicit configuration and man
 
 ## Technologies
 
-`ROS 2` · `Autoware Universe` · `CAN` · `Linux` · `CycloneDDS` · `Ethernet` · `LiDAR` · `IMU` · `GNSS-RTK` · `Python` · `C++` · `Qt` · `Git`
+`C++` · `CAN` · `ROS 2` · `Autoware Universe` · `Linux` · `CTest / gtest` · `Git` · `CycloneDDS` · `Ethernet` · `LiDAR` · `IMU` · `GNSS-RTK` · `Python` · `Qt`
 
 ---
 
-## What I can defend technically
+## Engineering scope & ownership
 
 My strongest ownership in this project is:
 
-- system architecture and interfaces
-- CAN reverse engineering at functional/system level
-- sensor and computer integration
-- ROS 2 / Autoware deployment and configuration
-- troubleshooting
-- mapping/localization integration
-- field validation
+- functional reverse engineering of a poorly documented physical system
+- definition and evolution of the vehicle software interface
+- CAN command/status interpretation and validation
+- driver/adapter architecture decisions
+- characterization and regression-test strategy
+- integration with ROS 2 / Autoware
+- sensor/computer/network integration
+- troubleshooting and field validation
 - operational procedures and knowledge transfer
 
-I used software development — including AI-assisted implementation where useful — as a means to solve these integration problems. I do not present this project as evidence that I developed the Autoware algorithms themselves.
+AI-assisted development was used for parts of later implementation, refactoring, testing and documentation. My responsibility remained the system behavior to preserve, architecture and interface decisions, review of generated changes, validation criteria, debugging and final acceptance on the target platform.
