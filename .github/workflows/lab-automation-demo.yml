@@ -1,0 +1,33 @@
+name: Lab automation demo
+
+on:
+  push:
+    paths:
+      - "labs/pylabrobot-workcell-demo/**"
+      - ".github/workflows/lab-automation-demo.yml"
+  pull_request:
+    paths:
+      - "labs/pylabrobot-workcell-demo/**"
+      - ".github/workflows/lab-automation-demo.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: labs/pylabrobot-workcell-demo
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: labs/pylabrobot-workcell-demo/pyproject.toml
+
+      - name: Install project
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: Run tests
+        run: pytest -q
