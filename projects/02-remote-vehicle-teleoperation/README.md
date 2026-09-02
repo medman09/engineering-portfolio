@@ -18,6 +18,8 @@ The system combined:
 
 The main engineering challenge was not one isolated software module; it was making **video, networking, operator interaction and vehicle control work together on a real platform**.
 
+This project is included in the portfolio mainly as evidence of cross-domain troubleshooting: a visible symptom at the operator station could originate in camera capture, encoding, packet transport, application behavior, command routing, ROS/CAN communication or the physical vehicle.
+
 ---
 
 ## System architecture
@@ -57,7 +59,7 @@ My work focused on the end-to-end integration:
 - latency measurement
 - real-vehicle test support and troubleshooting
 
-Software components included Python, C++ and Qt code. Parts of implementation and refactoring were produced with AI-assisted development; my responsibility was the architecture, integration, adaptation, debugging and validation on the real system.
+Software components included Python, C++ and Qt code. AI-assisted development was used for parts of implementation and refactoring; my responsibility remained the architecture, interface behavior, review, integration, debugging and validation on the real system.
 
 ---
 
@@ -76,9 +78,9 @@ Teleoperation requires a different design mindset from ordinary video streaming.
 
 The system was tested over mobile networks and tuned for practical driving/supervision rather than maximum visual quality.
 
-### Network behavior
+### Network behavior and root-cause isolation
 
-A later dedicated prototype also reproduced an important WebRTC troubleshooting case over VPN: the signaling and ICE connection could be established while full video frames were not reconstructed reliably.
+A later dedicated prototype reproduced an important WebRTC troubleshooting case over VPN: signaling and ICE connection could be established while full video frames were not reconstructed reliably.
 
 A reduced sender profile with approximately:
 
@@ -89,7 +91,23 @@ A reduced sender profile with approximately:
 
 was validated as a practical workaround for the lab network conditions.
 
-This is an example of the type of **system troubleshooting** I am comfortable with: separate signaling, transport, decoding and application behavior until the failure mechanism becomes clear.
+The useful engineering lesson was not the exact bitrate. It was the diagnostic method: separate the problem into stages and identify which layer is actually failing.
+
+```text
+camera capture
+    ↓
+encoder
+    ↓
+RTP / network transport
+    ↓
+receiver
+    ↓
+decoder
+    ↓
+application rendering
+```
+
+That same approach is transferable to other integrated systems: do not treat “the device is not working” as one failure domain.
 
 ### Vehicle-control safety
 
@@ -102,6 +120,10 @@ Remote driving is not only a networking problem. A usable design needs to consid
 - communication loss
 - safe fallback behavior
 - validation before real driving
+
+### Reproducible development and validation
+
+Later software work around the teleoperation stack was organized with explicit architecture documentation, build/test procedures and focused validation rather than changing the whole application at once. The goal was to make failures reproducible and preserve known behavior while individual components evolved.
 
 ---
 
@@ -122,16 +144,16 @@ Remote driving is not only a networking problem. A usable design needs to consid
 
 ---
 
-## What I can defend technically
+## Engineering scope & ownership
 
-I can explain and defend:
+My ownership in this project includes:
 
-- end-to-end teleoperation architecture
-- why video latency matters for remote driving
-- the data path from operator input to vehicle CAN
-- the return path for vehicle state
-- practical GStreamer/WebRTC integration
-- network trade-offs and troubleshooting
-- test strategy and real-system validation
+- end-to-end teleoperation architecture and integration
+- video-pipeline configuration and practical tuning
+- operator-to-vehicle command and feedback paths
+- ROS 2 / CAN connection to the physical platform
+- network testing and latency measurement
+- failure isolation across video, network, application and vehicle layers
+- real-system test planning and troubleshooting
 
-I do not position myself as a WebRTC protocol-stack developer or advanced concurrent-C++ specialist.
+The project demonstrates integration and diagnostic ownership across several technologies rather than expertise in implementing the WebRTC protocol stack itself.
