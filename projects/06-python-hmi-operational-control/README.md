@@ -10,6 +10,14 @@ The project is included in this portfolio because it shows my more recent Python
 
 The software is AI-assisted, but the engineering emphasis is on explicit state, bounded behavior, error paths, testability and validation against controlled interfaces before connecting to the real platform.
 
+### Inspect the code
+
+A small, self-contained public reconstruction of the background-control pattern is available here:
+
+**[→ Python implementation + focused tests](public_example/README.md)**
+
+It demonstrates non-overlapping polling, background commands, generation-based stale-result rejection, callback handoff, error propagation, worker tracking and clean shutdown. It is intentionally device-agnostic and contains no production endpoints, credentials or vehicle-specific command details.
+
 ---
 
 ## Simplified architecture
@@ -149,6 +157,26 @@ The current completed milestone records:
 - Tkinter callback exception: NONE
 
 A later work-in-progress milestone adds focused tests around rosbag/log control and keeps physical/operational validation separate from generic software checks.
+
+### Public executable evidence
+
+The private project cannot be published as a complete source repository. To make the software approach independently inspectable, the [`public_example`](public_example/README.md) directory contains a fresh reconstruction of the central background-communication mechanism and its tests.
+
+The public example was executed locally before publication:
+
+```text
+5 tests passed
+```
+
+The public tests cover:
+
+- nominal polling
+- rejection/coalescing of an overlapping poll
+- stale poll invalidation when a command supersedes it
+- communication-error propagation
+- shutdown rejecting new work and discarding queued callbacks
+
+This public test count is separate from the **80-test private application suite** described above.
 
 ---
 
