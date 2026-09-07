@@ -1,0 +1,39 @@
+name: Public code evidence
+
+on:
+  push:
+    paths:
+      - 'projects/06-python-hmi-operational-control/public_example/**'
+      - 'projects/01-autonomous-shuttle-integration/public_example/**'
+      - '.github/workflows/public-code-evidence.yml'
+  pull_request:
+    paths:
+      - 'projects/06-python-hmi-operational-control/public_example/**'
+      - 'projects/01-autonomous-shuttle-integration/public_example/**'
+      - '.github/workflows/public-code-evidence.yml'
+
+jobs:
+  python-example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run Python tests
+        working-directory: projects/06-python-hmi-operational-control/public_example
+        run: python -m unittest -v
+
+  cpp-example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure C++ example
+        working-directory: projects/01-autonomous-shuttle-integration/public_example
+        run: cmake -S . -B build
+      - name: Build C++ example
+        working-directory: projects/01-autonomous-shuttle-integration/public_example
+        run: cmake --build build --parallel
+      - name: Run CTest
+        working-directory: projects/01-autonomous-shuttle-integration/public_example
+        run: ctest --test-dir build --output-on-failure
