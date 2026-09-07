@@ -33,6 +33,20 @@ Using coding agents as part of a constrained engineering workflow: explicit scop
 
 ---
 
+## Public code & test evidence
+
+Most professional source repositories behind these projects cannot be published in full. To make the implementation approach directly inspectable, I include small **fresh public reconstructions** of two representative software boundaries. They contain no production credentials, proprietary CAN mappings or safety-sensitive command details.
+
+- **Python — asynchronous hardware-facing HMI control:** [implementation + focused tests →](projects/06-python-hmi-operational-control/public_example/README.md)  
+  Non-overlapping polling, background commands, generation-based stale-result rejection, callback handoff, explicit error propagation, worker tracking and clean shutdown. The public example uses only the Python standard library and has **5 focused tests**.
+
+- **C++17 — binary protocol / driver boundary:** [implementation + CTest →](projects/01-autonomous-shuttle-integration/public_example/README.md)  
+  Frame metadata/DLC validation, signed byte-level decoding, command encoding, finite/range checks and deterministic error-path testing using an entirely synthetic protocol. Built with warnings enabled and validated with **100% CTest pass** before publication.
+
+These examples are deliberately smaller than the private deployed systems. Their purpose is to show the code structure and test strategy behind the case studies without presenting confidential professional source code as public work.
+
+---
+
 ## Selected projects
 
 ### 1. Physical Test Automation & Instrumentation
@@ -53,7 +67,7 @@ Reverse-engineered a poorly documented vehicle interface, characterized existing
 
 The same platform was integrated with ROS 2 / Autoware and validated in autonomous operation up to 30 km/h. The architecture and know-how were later transferred to an industrial partner for reuse on more than ten similar vehicles.
 
-[Read case study →](projects/01-autonomous-shuttle-integration/README.md)
+[Read case study →](projects/01-autonomous-shuttle-integration/README.md) · [Inspect C++ example →](projects/01-autonomous-shuttle-integration/public_example/README.md)
 
 ---
 
@@ -64,7 +78,7 @@ Refactored and hardened an operational touchscreen HMI used with a real autonomo
 
 The current validated milestone includes **80 passing tests** plus connected and disconnected loopback validation, with generic software tests designed specifically to avoid sending operational commands to the vehicle.
 
-[Read case study →](projects/06-python-hmi-operational-control/README.md)
+[Read case study →](projects/06-python-hmi-operational-control/README.md) · [Inspect Python example →](projects/06-python-hmi-operational-control/public_example/README.md)
 
 ---
 
