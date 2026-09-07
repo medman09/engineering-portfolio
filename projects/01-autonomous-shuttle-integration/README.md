@@ -14,6 +14,14 @@ The important engineering pattern was:
 
 The same platform was later integrated with ROS 2 / Autoware and validated in autonomous operation.
 
+### Inspect the code
+
+A self-contained C++17 public reconstruction of the protocol/codec boundary is available here:
+
+**[→ C++ protocol implementation + CTest](public_example/README.md)**
+
+The public example uses entirely synthetic IDs, scales and payload values. It demonstrates frame validation, byte-level decoding/encoding, finite/range checking and focused error-path tests without exposing real CAN mappings or safety-sensitive vehicle-control details.
+
 ---
 
 ## Starting point
@@ -129,6 +137,26 @@ The validation strategy deliberately separated software-only checks from physica
 7. proceed to controlled low-speed/dynamic tests only after earlier stages pass
 
 This staged approach reduces the cost and risk of finding a software regression for the first time on a moving vehicle.
+
+### Public executable evidence
+
+The production/private interface cannot be published with its real protocol values. The [`public_example`](public_example/README.md) directory therefore contains a fresh synthetic reconstruction of the same software boundary:
+
+- explicit frame metadata
+- supported-ID/DLC validation
+- byte-level signed decoding
+- command encoding
+- finite and range checks
+- deterministic tests
+- standalone CMake/CTest build independent of ROS 2 and vehicle hardware
+
+The example was compiled locally with `-Wall -Wextra -Wpedantic` and validated with CTest before publication:
+
+```text
+100% tests passed, 0 tests failed
+```
+
+The synthetic protocol is deliberately not compatible with the real vehicle.
 
 ---
 
