@@ -28,6 +28,15 @@ For the projects in this portfolio, the engineering responsibility emphasized is
 7. diagnosing failures
 8. validating the solution against the real requirement
 
+## Engineering governance
+
+The broader engineering workflow used to structure requirements, architecture decisions, experiments, verification evidence, configuration management and portfolio promotion is documented in:
+
+- [Engineering Playbook](ENGINEERING_PLAYBOOK.md)
+- [Portfolio Update Workflow](PORTFOLIO_UPDATE_WORKFLOW.md)
+
+The process is intentionally proportional to change impact: small changes stay lightweight, while changes affecting architecture, interfaces, baselines, performance, safety or reproducibility require stronger traceability and evidence.
+
 ## Why the portfolio is structured as case studies
 
 Several repositories used during these projects contain:
